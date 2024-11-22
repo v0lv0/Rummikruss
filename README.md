@@ -44,7 +44,7 @@ Players place tiles on the grid to score points.
 3. **Score**:
    Score of round $n$, with $i_n$ intersection, while $I$ is the previous largest amount of intersection:
    ```math
-     1 + (\sqrt{i_n}-1  \quad if  \quad  i_n > I  \quad  else  \quad  0)
+     1 + (\sqrt{i_n}-1  if  i_n > I else 0)
    ```
    
 4. **Lock Blocks**:  At the end of their turn, a player can lock **L blocks** on the grid. Locked blocks cannot be moved in next 2 turns, but still partispate in the set and scoring.  
