@@ -43,21 +43,25 @@ Players place tiles on the grid to score points.
    - tile placed may not be in multiple sets with the exception for intersections.
    - The number used by the opponent last turn may not be used
    - If the number of intersection increased, gain 2 pts, else 1 
-<!-- 
-4. **Lock Blocks**:  At the end of their turn, a player can lock **L blocks** on the grid. Locked blocks cannot be moved in next 2 turns, but still partispate in the set and scoring.   -->
-
+   
 ## Endgame
 - Game ends when no moves remain and the tile pool is empty (or after a fixed number of turns).
 - **Winner**: Player with the highest score. Ties resolved by most intersections.
 
 <!-- ---------------------------------------------------------- -->
-Any set of blocks that connect in the board must obey the patterns [asc, dsc, rep, alone] of size at least
-Can't place the same number as the opponent in the previous turn.
-Can't place block connecting to the same blocks as the previous turn.
-[Opt] Can't place block connecting to the same block placed by the opponent in the last turn. 
-Score:  +1 if not connected, +2 if block connects
+## Testing rules
 
++ Any set of blocks that connect in the board must obey the patterns [asc, dsc, rep, alone] of size at least 3
 
++ Can't place the same number as the opponent in the previous turn.
+
++ Can't place block connecting to the same blocks as the previous turn.
+
++ [Opt] Can't place block connecting to the same block placed by the opponent in the last turn. 
+
++ Score:  +1 if not connected, +2 if block connects
+
+## Game engine define:
 Get_Game_state() -> 
    Board state(mxm array with numbers)
    card state: k x [1,...,n]
