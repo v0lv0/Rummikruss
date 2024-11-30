@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rummykruss with Real-Time Updates</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background-color: #f4f4f4;
+        }
+
+        h1 {
+            margin: 20px;
+        }
+
+        .board-container {
+            display: grid;
+            grid-template-columns: repeat(15, 40px);
+            grid-template-rows: repeat(15, 40px);
+            gap: 2px;
+            border: 2px solid #333;
+            background-color: #fff;
+        }
+
+        .cell {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            border: 1px solid #ccc;
+            background-color: white;
+        }
+
+        .cell.blocked {
+            background-color: #333;
+        }
+
+        .cell.tile {
+            font-weight: bold;
+            color: white;
+        }
+
+        .tile-red {
+            background-color: #FF6347;
+        }
+
+        .tile-green {
+            background-color: #3CB371;
+        }
+
+        .tile-blue {
+            background-color: #4682B4;
+        }
+
+        .tile-yellow {
+            background-color: #FFD700;
+        }
+    </style>
+</head>
+<body>
+    <h1>Rummykruss Board Game</h1>
+    <div class="board-container" id="board"></div>
+    <script src="app.js"></script>
+</body>
+</html>
