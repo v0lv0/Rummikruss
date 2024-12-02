@@ -210,6 +210,10 @@ class GameState {
         this.notify();
     }
 
+    isCardValid(suiteId, cardNumber) {
+        return true;
+    }
+
     getScore(playerId) { return (playerId + 1) * 100; }
     getScores() { return [100, 200]; }
 
