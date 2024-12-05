@@ -1,7 +1,6 @@
-
-const boardSize = 5; // Adjust size of the board
-const numCards = 5; // Number of unique cards
-const numDecks = 3;   // How many times each card repeats
+const boardSize = 10; // Adjust size of the board
+const numCards = 8; // Number of unique cards
+const numDecks = 2;   // How many times each card repeats
 
 const cellSize = 42;
 const cellMargin = 2;
@@ -146,6 +145,7 @@ class TextBox {
 }
 
 // TODO: call initial board config
+// [x,y,color,num]
 // const initialBoardConfig = [[2, 2, 1, 2], [4, 4, 0, 3]];
 const initialBoardConfig = [[2, 2, 0, 2], [4, 4, 0, 3]];
 // TODO: Replace this with actual game logic
@@ -155,13 +155,36 @@ class GameState {
         this.currentPlayer = 0;
         this.cards = Array.from(
             { length: numDecks },
-            _ => Array.from({ length: numCards }, _ => true));
+            _ => Array.from({ length: numCards }, _ => true)
+        );
         this.board = Array.from(
             { length: boardSize },
-            _ => Array.from({ length: boardSize }, _ => [-1, -1]));
+            _ => Array.from({ length: boardSize }, _ => [-1, -1] )
+        );
         this.gameOver_ = false;
+        this.scores = Array(numPlayers).fill(0);
+    }
+    calculateScore(playerId) {
+        let score = 0;
+        // Example scoring logic: count the number of cards the player has placed
+        for (let i = 0; i < this.board.length; i++) {
+            for (let j = 0; j < this.board[i].length; j++) {
+                if (this.board[i][j][0] != -1 && this.board[i][j][0] === playerId) {
+                    score += 10;  // Award 10 points for each card placed
+                }
+            }
+        }
+        this.scores[playerId] = score;
     }
 
+    getScore(playerId) {
+        return this.scores[playerId];
+    }
+
+    getScores() {
+        return this.scores;
+    }
+    
     notify() {
         for (const [_, callback] of Object.entries(this.callbacks))
             callback(this);
@@ -186,7 +209,9 @@ class GameState {
         this.notify();
     }
 
-    get currentPlayer() { return this.currentPlayer_; }
+    get currentPlayer() { 
+        return this.currentPlayer_; 
+    }
 
     canPlaceCard(row, col, suiteId, cardNumber) {
         if (this.board[row][col][0] != -1
@@ -196,29 +221,145 @@ class GameState {
         }
         return true;
     }
-
+    
     placeCard(row, col, suiteId, cardNumber) {
-        // TODO
         if (!this.canPlaceCard(row, col, suiteId, cardNumber))
             throw new Error("Invalid call, need to check before calling this");
+
         this.board[row][col] = [suiteId, cardNumber];
         this.cards[suiteId][cardNumber] = false;
+
         if (this.cards.every(cards => cards.every(c => !c))) {
             this.gameOver_ = true;
         }
-        this.currentPlayer = (this.currentPlayer + 1) % numPlayers;
+
+        // this.currentPlayer = (this.currentPlayer + 1) % numPlayers;
         this.notify();
     }
+    
+    
+    isCardValid(x, y) {
+        const suiteId    = this.board[x][y][0];
+        const cardNumber = this.board[x][y][1];
 
-    isCardValid(suiteId, cardNumber) {
+        // Check for same suite in all 4 directions
+        let count = 1;
+        let dis_from_origin = 1;
+
+        while (x - dis_from_origin >= 0 && this.board[x - dis_from_origin][y][1] === cardNumber) {
+            count++;
+            dis_from_origin++;
+        }
+        dis_from_origin = 1;
+
+        while (x + dis_from_origin < this.board.length && this.board[x + dis_from_origin][y][1] === cardNumber) {
+            count++;
+            dis_from_origin++;
+        }
+        if (count >= 3) return true;
+        
+        count = 1;
+        dis_from_origin = 1;
+        while (y - dis_from_origin >= 0 && this.board[x][y - dis_from_origin][1] === cardNumber) {
+            count++;
+            dis_from_origin++;
+        }
+        dis_from_origin = 1;
+        while (y + dis_from_origin < this.board.length && this.board[x][y + dis_from_origin][1] === cardNumber) {
+            count++;
+            dis_from_origin++;
+        }
+        if (count >= 3) return true;
+
+
+        // Check for consecutive numbers in all 4 directions
+        // check left half for decreasing numbers
+        count = 1;
+        dis_from_origin = 1;
+        while (x - dis_from_origin >= 0 && this.board[x - dis_from_origin][y][1] === cardNumber - dis_from_origin) {
+            count++;
+            dis_from_origin++;
+        }
+        dis_from_origin = 1;
+
+        // Check right half for increasing numbers
+        while (x + dis_from_origin < this.board.length && this.board[x + dis_from_origin][y][1] === cardNumber + dis_from_origin) {
+            count++;
+            dis_from_origin++;
+        }
+        if (count >= 3) return true;
+
+        count = 1;
+        dis_from_origin = 1;
+        // check left half for increasing numbers
+        while ( x- dis_from_origin >= 0 && this.board[x - dis_from_origin][y][1] === cardNumber + dis_from_origin) {
+            count++;
+            dis_from_origin++;
+        }
+        dis_from_origin = 1;
+        // check right half for decreasing numbers
+        while (x + dis_from_origin < this.board.length && this.board[x + dis_from_origin][y][1] === cardNumber - dis_from_origin) {
+            count++;
+            dis_from_origin++;
+        }
+        if (count >= 3) return true;
+
+        count = 1;
+        dis_from_origin = 1;
+        // check top half for decreasing numbers
+        while (y - dis_from_origin >= 0 && this.board[x][y - dis_from_origin][1] === cardNumber - dis_from_origin) {
+            count++;
+            dis_from_origin++;
+        }
+        dis_from_origin = 1;
+        // check bottom half for increasing numbers
+        while (y + dis_from_origin < this.board.length && this.board[x][y + dis_from_origin][1] === cardNumber + dis_from_origin) {
+            count++;
+            dis_from_origin++;
+        }
+        if (count >= 3) return true;
+
+        count = 1;
+        dis_from_origin = 1;
+        // check top half for increasing numbers
+        while (y - dis_from_origin >= 0 && this.board[x][y - dis_from_origin][1] === cardNumber + dis_from_origin) {
+            count++;
+            dis_from_origin++;
+        }
+        dis_from_origin = 1;
+        // check bottom half for decreasing numbers
+        while (y + dis_from_origin < this.board.length && this.board[x][y + dis_from_origin][1] === cardNumber - dis_from_origin) {
+            count++;
+            dis_from_origin++;
+        }
+        if (count >= 3) return true;
+
+        return false;
+    }
+
+    isBoardValid(){
+        // board is valid if all placed cards are valid
+        for(let i = 0; i < this.board.length; i++){
+            for(let j = 0; j < this.board.length; j++){
+                if(this.board[i][j][0] == -1) continue;
+                if(!this.isCardValid(i, j)){
+                    console.log("Invalid card at ", i, j);
+                    return false;
+                }
+                
+            }
+        }
         return true;
     }
 
-    getScore(playerId) { return (playerId + 1) * 100; }
-    getScores() { return [100, 200]; }
+    // getScore(playerId) { 
+    //     return (playerId + 1) * 100; 
+    // }
+    // getScores() {
+    //     return [100, 200]; 
+    // }
 
     get gameOver() { return this.gameOver_; }
-
 }
 let gameState = null;
 
@@ -373,27 +514,41 @@ class BoardView {
             parseInt(selectedCard.dataset.cardNumber));
     }
 }
-
 class ScoreView {
     constructor(playerId, playerName) {
         this.playerName = playerName;
         this.playerId = playerId;
+
+        // Create container for the score view
         const container = document.createElement('div');
         container.classList.add('score-view');
+
+        // Create element for player name
         const nameElem = document.createElement('div');
         nameElem.classList.add('score-view-player');
         nameElem.textContent = `Player ${playerId + 1}: ${playerName}`;
         container.appendChild(nameElem);
+
+        // Create element for displaying player score
         const scoreElem = document.createElement('div');
+        scoreElem.classList.add('score-view-score');
+        scoreElem.textContent = `Score: ${gameState.getScore(playerId)}`; // Set initial score
+        container.appendChild(scoreElem);
+
+        // Register a callback to update the score when the game state changes
         gameState.addNotifyCallback(`score-update-${playerId}`, _ => {
             scoreElem.textContent = `Score: ${gameState.getScore(this.playerId)}`;
-        })
-        container.appendChild(scoreElem);
+        });
+
         this.container = container;
     }
 
-    getElement() { return this.container; }
+    // Method to get the DOM element representing the score view
+    getElement() { 
+        return this.container; 
+    }
 }
+
 
 class SettingsPage {
     constructor(onNext) {
@@ -492,6 +647,27 @@ class GamePage {
         scoreContainer.appendChild(player1Score.getElement());
         scoreContainer.appendChild(player2Score.getElement());
         gameState.notify();
+
+        const endTurnButton = document.createElement('button');
+        endTurnButton.id = 'end-turn-button';
+        endTurnButton.textContent = 'End Turn';
+        endTurnButton.addEventListener('click', () => {
+            if (gameState.isBoardValid()) {
+                console.log("Turn ended successfully.");
+                
+                // Update the score of the current player
+                gameState.calculateScore(gameState.currentPlayer);
+        
+                // Notify all views to update (including score views)
+                gameState.notify();
+        
+                // Update the current player
+                gameState.currentPlayer = (gameState.currentPlayer + 1) % numPlayers;
+            } else {
+                alert('Invalid board configuration. Please fix it before ending your turn.');
+            }
+        });
+        scoreContainer.appendChild(endTurnButton);
     }
 
     createView() {
