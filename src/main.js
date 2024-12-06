@@ -146,8 +146,8 @@ class TextBox {
 
 // TODO: call initial board config
 // [x,y,color,num]
-// const initialBoardConfig = [[2, 2, 1, 2], [4, 4, 0, 3]];
-const initialBoardConfig = [[2, 2, 0, 2], [4, 4, 0, 3]];
+const initialBoardConfig = [];
+// const initialBoardConfig = [[2, 2, 0, 2], [4, 4, 0, 3]];
 // TODO: Replace this with actual game logic
 class GameState {
     constructor(boardSize, numDecks, numCards) {
@@ -444,6 +444,76 @@ class CellView {
     }
 }
 
+// class BoardView {
+//     constructor(parentView, boardSize) {
+//         this.gameView = parentView;
+//         this.boardSize = boardSize;
+//         this.cellViews = [];
+//         const board = document.getElementById('board');
+//         board.style.gridTemplateColumns = `repeat(${boardSize}, ${cellSize}px)`;
+//         board.style.gridTemplateRows = `repeat(${boardSize}, ${cellSize}px)`;
+//         board.style.gap = `${cellMargin}px`
+//         addBoardPadding(board, 0, cellMargin);
+//         for (let i = 0; i < boardSize; i++) {
+//             for (let j = 0; j < boardSize; j++) {
+//                 const cellView = new CellView(this, i, j);
+//                 board.appendChild(cellView.cellDiv);
+//                 this.cellViews.push(cellView);
+//             }
+//         }
+
+//         board.addEventListener('mouseover', e => {
+//             const target = e.target;
+//             if (target.getAttribute('id').includes('cell') && target.childElementCount == 0) {
+//                 if (this.gameView.selectedCard)
+//                     target.classList.add('hover');
+//             }
+//         });
+//         board.addEventListener('mouseout', e => {
+//             const target = e.target;
+//             if (target.getAttribute('id').includes('cell'))
+//                 if (target.classList.contains('hover'))
+//                     target.classList.remove('hover');
+//         });
+//         board.addEventListener('click', e => this.onClick(e));
+
+//         this.boardDiv = board;
+//     }
+
+//     placeCard(row, col, suiteId, cardNumber) {
+//         if (!gameState.canPlaceCard(row, col, suiteId, cardNumber)) {
+//             return;
+//         }
+//         const cellView = this.cellViews[row * this.boardSize + col];
+//         const cell = cellView.cellDiv;
+//         const selectedCard = this.gameView.deckViews[suiteId]
+//             .cardViews[cardNumber].cardDiv;
+//         cell.appendChild(selectedCard);
+//         // Remove hover over for the selected card:
+//         selectedCard.classList.remove('selected');
+//         selectedCard.classList.remove('card-hover');
+
+//         this.gameView.selectedCard = null;
+//         // Remove hover over for cell
+//         cell.classList.remove('hover');
+//         cell.classList.add('occupied');
+//         gameState.placeCard(row, col, suiteId, cardNumber);
+//     }
+
+//     onClick(e) {
+//         if (!e.target.getAttribute('id').includes('cell')
+//             || e.target.childElementCount != 0)
+//             return;
+//         if (!this.gameView.selectedCard) return;
+//         const selectedCard = this.gameView.selectedCard;
+//         const cell = e.target;
+//         const row = cell.dataset.row;
+//         const col = cell.dataset.col;
+//         this.placeCard(parseInt(row), parseInt(col),
+//             parseInt(selectedCard.dataset.suiteId),
+//             parseInt(selectedCard.dataset.cardNumber));
+//     }
+// }
 class BoardView {
     constructor(parentView, boardSize) {
         this.gameView = parentView;
@@ -454,6 +524,7 @@ class BoardView {
         board.style.gridTemplateRows = `repeat(${boardSize}, ${cellSize}px)`;
         board.style.gap = `${cellMargin}px`
         addBoardPadding(board, 0, cellMargin);
+
         for (let i = 0; i < boardSize; i++) {
             for (let j = 0; j < boardSize; j++) {
                 const cellView = new CellView(this, i, j);
@@ -469,13 +540,17 @@ class BoardView {
                     target.classList.add('hover');
             }
         });
+
         board.addEventListener('mouseout', e => {
             const target = e.target;
             if (target.getAttribute('id').includes('cell'))
                 if (target.classList.contains('hover'))
                     target.classList.remove('hover');
         });
+
         board.addEventListener('click', e => this.onClick(e));
+
+        board.addEventListener('dblclick', e => this.onDoubleClick(e)); // Add double-click listener
 
         this.boardDiv = board;
     }
@@ -500,6 +575,34 @@ class BoardView {
         gameState.placeCard(row, col, suiteId, cardNumber);
     }
 
+    removeCard(row, col) {
+        const cellView = this.cellViews[row * this.boardSize + col];
+        const cell = cellView.cellDiv;
+        const [suiteId, cardNumber] = gameState.board[row][col];
+    
+        if (suiteId === -1 || cardNumber === -1) return; // No card to remove
+    
+        // Add the card back to its original position in the deck
+        const cardView = this.gameView.deckViews[suiteId].cardViews[cardNumber];
+        const card = cardView.cardDiv;
+    
+        // Restore the card to its exact original slot in the deck
+        const deck = this.gameView.deckViews[suiteId].deckDiv;
+        const slot = deck.children[cardNumber]; // Access the specific slot for this card
+        slot.appendChild(card);
+    
+        // Update game state
+        gameState.board[row][col] = [-1, -1]; // Reset the board cell
+        gameState.cards[suiteId][cardNumber] = true; // Mark the card as available
+    
+        // Update the cell UI
+        cell.innerHTML = ''; // Clear the cell content
+        cell.classList.remove('occupied'); // Remove 'occupied' class
+    
+        // Notify game state listeners
+        gameState.notify();
+    }
+    
     onClick(e) {
         if (!e.target.getAttribute('id').includes('cell')
             || e.target.childElementCount != 0)
@@ -513,7 +616,21 @@ class BoardView {
             parseInt(selectedCard.dataset.suiteId),
             parseInt(selectedCard.dataset.cardNumber));
     }
+
+    onDoubleClick(e) {
+        if (!e.target.getAttribute('id').includes('card')) return;
+
+        const cell = e.target.parentElement; // The parent cell of the card
+        const row = cell.dataset.row;
+        const col = cell.dataset.col;
+
+        if (row !== undefined && col !== undefined) {
+            this.removeCard(parseInt(row), parseInt(col));
+        }
+    }
 }
+
+
 class ScoreView {
     constructor(playerId, playerName) {
         this.playerName = playerName;
