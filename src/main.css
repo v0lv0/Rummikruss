@@ -637,7 +637,7 @@ button#restart-button:active {
 
 .game-header {
     font-family: 'Gill Sans', 'Gill Sans MT', Calibri, 'Trebuchet MS', sans-serif;
-    font-size: 1.0em;
+    font-size: 1.2em;
     font-weight: bold;
     text-align: center;
 }
@@ -651,8 +651,6 @@ button#restart-button:active {
 
 .card-deck {
     display: flex;
-    gap: 10px;
-    margin: 10px;
 }
 
 .card {
@@ -662,7 +660,7 @@ button#restart-button:active {
     align-items: center;
     justify-content: center;
     border: 2px solid black;
-    border-radius: 8px;
+    /* border-radius: 8px; */
     cursor: pointer;
     /* color: white; */
     font-family: 'Gill Sans', 'Gill Sans MT', Calibri, 'Trebuchet MS', sans-serif;

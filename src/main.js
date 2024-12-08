@@ -3,12 +3,28 @@ const boardSize = 5; // Adjust size of the board
 const numCards = 5; // Number of unique cards
 const numDecks = 3;   // How many times each card repeats
 
-const cellSize = 42;
+let cellSize = 42;
 const cellMargin = 2;
 const cellBorder = 1;
 const suiteColors = ['#FF63474D', '#3CB3714D', '#FFD7004D', '#4682B44D', '#8A2BE24D', '#FF45004D', '#32CD324D', '#6A5A3D4D']
-const cardSize = 40;
+let cardSize = 40;
+let borderRadius = 8;
+const borderRadiusScale = 8 / 40;
 const numPlayers = 2;
+const cardCellSizeDif = 2;
+let cardMargin = 10;
+const cardMarginScale = 8 / 40;
+
+function adjustScalingFactor(boardSize, numDecks) {
+    const targetHeight = window.innerHeight
+        - boardSize * (cellMargin + cardCellSizeDif);
+    cellSize = Math.floor(targetHeight / (boardSize * (1 + cardMarginScale) + numDecks));
+    cardSize = cellSize - cardCellSizeDif;
+    borderRadius = Math.round(borderRadiusScale * cardSize);
+    cardMargin = Math.floor(cardSize * cardMarginScale);
+    console.log(borderRadiusScale);
+    console.log(borderRadius);
+}
 
 function addBoardPadding(board, cellBorder, cellMargin) {
     padding = cellMargin / 2;
@@ -145,12 +161,19 @@ class TextBox {
     getValue() { return this.value; }
 }
 
+function randInt(a, b) {
+    return Math.round(Math.random() * (b - a) + a)
+}
+
 // TODO: call initial board config
 // const initialBoardConfig = [[2, 2, 1, 2], [4, 4, 0, 3]];
 const initialBoardConfig = [[2, 2, 0, 2], [4, 4, 0, 3]];
 // TODO: Replace this with actual game logic
 class GameState {
     constructor(boardSize, numDecks, numCards) {
+        this.boardSize = boardSize;
+        this.numDecks = numDecks;
+        this.numCards = numCards;
         this.callbacks = {};
         this.currentPlayer = 0;
         this.cards = Array.from(
@@ -160,6 +183,25 @@ class GameState {
             { length: boardSize },
             _ => Array.from({ length: boardSize }, _ => [-1, -1]));
         this.gameOver_ = false;
+        this.lastPlayedCard = { suiteId: -1, cardNumber: -1 };
+        this.scores = [0, 0];
+        this.setupRandomValidBoard(this.boardSize);
+    }
+
+    setupRandomValidBoard(numOnBoard) {
+        for (let i = 0; i < numOnBoard; i++) {
+            while (true) {
+                const row = randInt(0, this.boardSize - 1);
+                const col = randInt(0, this.boardSize - 1);
+                const deck = randInt(0, this.numDecks - 1);
+                const card = randInt(0, this.numCards - 1);
+                if (this.canPlaceCard(row, col, deck, card)) {
+                    this.board[row][col] = [deck, card];
+                    this.cards[deck][card] = false;
+                    break;
+                }
+            }
+        }
     }
 
     notify() {
@@ -169,7 +211,7 @@ class GameState {
 
     addNotifyCallback(name, callback) {
         if (this.callbacks[name] != undefined) {
-            throw new Error(`callback for '${name}' already exists`);
+            throw new Error(`Callback '${name} already exists`);
         }
         this.callbacks[name] = callback;
     }
@@ -188,13 +230,129 @@ class GameState {
 
     get currentPlayer() { return this.currentPlayer_; }
 
-    canPlaceCard(row, col, suiteId, cardNumber) {
-        if (this.board[row][col][0] != -1
-            || this.board[row][col][1] != -1
-            || !this.cards[suiteId][cardNumber]) {
-            return false;
+    getVerticalConnected(row, col, suiteId, cardNumber) {
+        let down = [[suiteId, cardNumber]], up = [];
+        let i = row + 1;
+        while (i < this.boardSize && this.cellHasCard(i, col)) {
+            down.push(this.board[i][col]);
+            i++;
+        }
+        i = row - 1;
+        while (i >= 0 && this.cellHasCard(i, col)) {
+            up.push(this.board[i][col]);
+            i--;
+        }
+        up.reverse();
+        return up.concat(down);
+    }
+
+    getHorizontalConnected(row, col, suiteId, cardNumber) {
+        let right = [[suiteId, cardNumber]], left = [];
+        let j = col + 1;
+        while (j < this.boardSize && this.cellHasCard(row, j)) {
+            right.push(this.board[row][j]);
+            j++;
+        }
+        j = col - 1;
+        while (j >= 0 && this.cellHasCard(row, j)) {
+            left.push(this.board[row][j]);
+            j--;
+        }
+        console.log("horz");
+        console.log(left);
+        left.reverse();
+        return left.concat(right);
+    }
+
+    getNumConnected(row, col, vis) {
+        let count = 1;
+        if (row + 1 < this.boardSize && this.cellHasCard(row + 1, col)
+            && !vis[row + 1][col]) {
+            vis[row + 1][col] = true;
+            count += this.getNumConnected(row + 1, col, vis);
+        }
+        if (row - 1 >= 0 && this.cellHasCard(row - 1, col)
+            && !vis[row - 1][col]) {
+            vis[row - 1][col] = true;
+            count += this.getNumConnected(row - 1, col, vis);
+        }
+        if (col + 1 < this.boardSize && this.cellHasCard(row, col + 1)
+            && !vis[row][col + 1]) {
+            vis[row][col + 1] = true;
+            count += this.getNumConnected(row, col + 1, vis);
+        }
+        if (col - 1 >= 0 && this.cellHasCard(row, col - 1)
+            && !vis[row][col - 1]) {
+            vis[row][col - 1] = true;
+            count += this.getNumConnected(row, col - 1, vis);
+        }
+        return count;
+    }
+
+    isArrayAsc(arr) {
+        console.log(arr);
+        for (let i = 0; i < arr.length - 1; i++) {
+            if (arr[i + 1][1] - arr[i][1] != 1
+                || arr[i + 1][0] != arr[i][0])
+                return false;
         }
         return true;
+    }
+
+    isArrayDsc(arr) {
+        for (let i = 0; i < arr.length - 1; i++) {
+            if (arr[i][1] - arr[i + 1][1] != 1
+                || arr[i + 1][0] != arr[i][0])
+                return false;
+        }
+        return true;
+    }
+
+    isArrayRep(arr) {
+        for (let i = 0; i < arr.length - 1; i++) {
+            if (arr[i][1] != arr[i + 1][1]
+                || arr[i][0] == arr[i + 1][0])
+                return false;
+        }
+        return true;
+    }
+
+    isArrayConsistent(arr) {
+        if (arr.length < 2) return true;
+        console.log(this.isArrayAsc(arr));
+        console.log(this.isArrayDsc(arr));
+        console.log(this.isArrayRep(arr));
+        return this.isArrayAsc(arr)
+            || this.isArrayDsc(arr)
+            || this.isArrayRep(arr);
+    }
+
+    isConsistent(row, col, suiteId, cardNumber) {
+        const horizontal = this.getHorizontalConnected(row, col, suiteId, cardNumber);
+        const vertical = this.getVerticalConnected(row, col, suiteId, cardNumber);
+        console.log('isConsistent:');
+        console.log(horizontal);
+        console.log(vertical);
+        return this.isArrayConsistent(horizontal)
+            && this.isArrayConsistent(vertical);
+    }
+
+    cellHasCard(row, col) {
+        return this.board[row][col][0] != -1
+            && this.board[row][col][1] != -1;
+    }
+
+    canPlaceCard(row, col, suiteId, cardNumber) {
+        // console.log(`blocked ${this.isCardBlocked(suiteId, cardNumber)}`);
+        // console.log(`in deck ${this.isCardInDeck(suiteId, cardNumber)}`);
+        // console.log(`is cons ${this.isConsistent(row, col, suiteId, cardNumber)}`);
+        if (this.board[row][col][0] != -1
+            || this.board[row][col][1] != -1
+            || !this.isCardInDeck(suiteId, cardNumber)
+            || this.isCardBlocked(suiteId, cardNumber)) {
+            return false;
+        }
+        return this.isConsistent(row, col, suiteId, cardNumber);
     }
 
     placeCard(row, col, suiteId, cardNumber) {
@@ -206,16 +364,39 @@ class GameState {
         if (this.cards.every(cards => cards.every(c => !c))) {
             this.gameOver_ = true;
         }
+        let vis = Array.from({ length: this.boardSize }, _ =>
+            Array.from({ length: this.boardSize }, _ => false)
+        );
+        vis[row][col] = true;
+        this.scores[this.currentPlayer] +=
+            this.getNumConnected(row, col, vis);
+        console.log(vis);
+        console.log(this.scores);
         this.currentPlayer = (this.currentPlayer + 1) % numPlayers;
+        this.lastPlayedCard.suiteId = suiteId;
+        this.lastPlayedCard.cardNumber = cardNumber;
         this.notify();
     }
 
-    isCardValid(suiteId, cardNumber) {
-        return true;
+    isCardInDeck(suiteId, cardNumber) {
+        return this.cards[suiteId][cardNumber];
     }
 
-    getScore(playerId) { return (playerId + 1) * 100; }
-    getScores() { return [100, 200]; }
+    isCardBlocked(suiteId, cardNumber) {
+        return this.isCardInDeck(suiteId, cardNumber)
+            && (suiteId == this.lastPlayedCard.suiteId
+                || cardNumber == this.lastPlayedCard.cardNumber);
+    }
+
+    canSelectCard(suiteId, cardNumber) {
+        return !this.isCardBlocked(suiteId, cardNumber)
+            && this.isCardInDeck(suiteId, cardNumber);
+    }
+
+    getScore(playerId) { return this.scores[playerId]; }
+    getScores() { return this.scores; }
+    getBoardState() { return this.board; }
+    getDeckState() { return this.cards; }
 
     get gameOver() { return this.gameOver_; }
 
@@ -223,7 +404,7 @@ class GameState {
 let gameState = null;
 
 class GameView {
-    constructor(boardSize, numDecks, numCards, initialBoardConfig) {
+    constructor(boardSize, numDecks, numCards) {
         gameState = new GameState(boardSize, numDecks, numCards);
         this.selectedCard = null;
         this.numDecks = numDecks;
@@ -235,34 +416,52 @@ class GameView {
         this.deckViews.forEach(deckView =>
             cardBlock.appendChild(deckView.deckDiv));
         this.boardView = new BoardView(this, boardSize);
+    }
 
-        initialBoardConfig.forEach(x => this.boardView.placeCard(...x));
-        gameState.currentPlayer = 0;
+    render() {
+        this.deckViews.forEach(deck => deck.render());
+        this.boardView.render();
     }
 }
 
 class DeckView {
     constructor(parentView, suiteId, numCards) {
         this.gameView = parentView;
+        this.suiteId = suiteId;
+        this.numCards = numCards;
         const deck = document.createElement('div');
+        deck.addEventListener('click', e => this.onClick(e));
+        this.deckDiv = deck;
+        this.render();
+        gameState.addNotifyCallback(`deck_${suiteId}`, _ => { this.render(); });
+    }
+
+    render() {
+        const deck = this.deckDiv;
+        deck.innerHTML = '';
         deck.classList.add('card-deck');
-        this.cardViews = Array.from(
-            { length: numCards },
-            (_, k) => new CardView(this, suiteId, k));
-        this.cardViews.forEach(card => {
+        // deck.style.gap = `${cardMargin}px`;
+        deck.style.gap = `10px`;
+        deck.style.margin = `${cardMargin}px`;
+        this.cardViews = []
+        for (let i = 0; i < this.numCards; i++) {
             const fixedPos = document.createElement('div');
             fixedPos.style.width = `${cellSize}px`;
             fixedPos.style.height = `${cellSize}px`;
-            fixedPos.appendChild(card.cardDiv);
+            if (gameState.getDeckState()[this.suiteId][i]) {
+                const cardView = new CardView(this, this.suiteId, i);
+                this.cardViews.push(cardView);
+                fixedPos.appendChild(cardView.cardDiv);
+            }
             deck.appendChild(fixedPos);
-        });
-        deck.addEventListener('click', e => this.onClick(e));
-        this.deckDiv = deck;
+        }
     }
 
     onClick(e) {
         const target = e.target;
-        if (target.classList.contains('card')) {
+        if (target.getAttribute('id')?.includes('card')
+            && gameState.canSelectCard(target.dataset.suiteId,
+                target.dataset.cardNumber)) {
             if (this.gameView.selectedCard)
                 this.gameView.selectedCard.classList.remove('selected');
             this.gameView.selectedCard = target;
@@ -274,16 +473,30 @@ class DeckView {
 class CardView {
     constructor(parentView, suiteId, cardNumber) {
         this.suiteId = suiteId;
+        this.cardNumber = cardNumber;
         const card = document.createElement('div');
         card.setAttribute('id', `card_${suiteId}_${cardNumber}`)
         card.classList.add('card');
-        card.classList.add('card-hover');
+        if (gameState.canSelectCard(suiteId, cardNumber))
+            card.classList.add('card-hover');
         card.style.height = `${cardSize}px`;
         card.style.width = `${cardSize}px`;
+        card.style.borderRadius = `${borderRadius}px`;
         card.style.background = suiteColors[suiteId % suiteColors.length];
-        card.textContent = cardNumber;
+        card.textContent = parseInt(cardNumber) + 1;
         card.dataset.cardNumber = cardNumber;
         card.dataset.suiteId = suiteId;
+
+
+        if (gameState.isCardInDeck(this.suiteId, this.cardNumber)) {
+            if (gameState.isCardBlocked(this.suiteId, this.cardNumber)) {
+                card.style.background = 'gray';
+                card.classList.remove('card-hover');
+            }
+        } else {
+            card.classList.remove('card-hover');
+        }
+
         this.cardDiv = card;
     }
 }
@@ -309,22 +522,15 @@ class BoardView {
         this.boardSize = boardSize;
         this.cellViews = [];
         const board = document.getElementById('board');
-        board.style.gridTemplateColumns = `repeat(${boardSize}, ${cellSize}px)`;
-        board.style.gridTemplateRows = `repeat(${boardSize}, ${cellSize}px)`;
-        board.style.gap = `${cellMargin}px`
-        addBoardPadding(board, 0, cellMargin);
-        for (let i = 0; i < boardSize; i++) {
-            for (let j = 0; j < boardSize; j++) {
-                const cellView = new CellView(this, i, j);
-                board.appendChild(cellView.cellDiv);
-                this.cellViews.push(cellView);
-            }
-        }
-
         board.addEventListener('mouseover', e => {
             const target = e.target;
-            if (target.getAttribute('id').includes('cell') && target.childElementCount == 0) {
-                if (this.gameView.selectedCard)
+            if (target.getAttribute('id')?.includes('cell')
+                && target.childElementCount == 0) {
+                if (this.gameView.selectedCard
+                    && gameState.canPlaceCard(parseInt(target.dataset.row),
+                        parseInt(target.dataset.col),
+                        parseInt(this.gameView.selectedCard.dataset.suiteId),
+                        parseInt(this.gameView.selectedCard.dataset.cardNumber)))
                     target.classList.add('hover');
             }
         });
@@ -335,42 +541,50 @@ class BoardView {
                     target.classList.remove('hover');
         });
         board.addEventListener('click', e => this.onClick(e));
-
         this.boardDiv = board;
+        this.render();
+        gameState.addNotifyCallback('board', _ => { this.render(); });
     }
 
-    placeCard(row, col, suiteId, cardNumber) {
-        if (!gameState.canPlaceCard(row, col, suiteId, cardNumber)) {
-            return;
+    render() {
+        const board = this.boardDiv;
+        board.innerHTML = "";
+        board.style.gridTemplateColumns = `repeat(${this.boardSize}, ${cellSize}px)`;
+        board.style.gridTemplateRows = `repeat(${this.boardSize}, ${cellSize}px)`;
+        board.style.gap = `${cellMargin}px`
+        addBoardPadding(board, 0, cellMargin);
+        const boardState = gameState.getBoardState();
+        for (let i = 0; i < this.boardSize; i++) {
+            for (let j = 0; j < this.boardSize; j++) {
+                const cellView = new CellView(this, i, j);
+                if (boardState[i][j][0] != -1 && boardState[i][j][1] != -1) {
+                    const cardView = new CardView(null, boardState[i][j][0], boardState[i][j][1]);
+                    cellView.cellDiv.appendChild(cardView.cardDiv);
+                }
+                board.appendChild(cellView.cellDiv);
+                this.cellViews.push(cellView);
+            }
         }
-        const cellView = this.cellViews[row * this.boardSize + col];
-        const cell = cellView.cellDiv;
-        const selectedCard = this.gameView.deckViews[suiteId]
-            .cardViews[cardNumber].cardDiv;
-        cell.appendChild(selectedCard);
-        // Remove hover over for the selected card:
-        selectedCard.classList.remove('selected');
-        selectedCard.classList.remove('card-hover');
-
-        this.gameView.selectedCard = null;
-        // Remove hover over for cell
-        cell.classList.remove('hover');
-        cell.classList.add('occupied');
-        gameState.placeCard(row, col, suiteId, cardNumber);
     }
 
     onClick(e) {
         if (!e.target.getAttribute('id').includes('cell')
             || e.target.childElementCount != 0)
             return;
-        if (!this.gameView.selectedCard) return;
+        if (!this.gameView.selectedCard) return
         const selectedCard = this.gameView.selectedCard;
         const cell = e.target;
-        const row = cell.dataset.row;
-        const col = cell.dataset.col;
-        this.placeCard(parseInt(row), parseInt(col),
+        const row = parseInt(cell.dataset.row);
+        const col = parseInt(cell.dataset.col);
+        if (!gameState.canPlaceCard(row, col,
+            parseInt(selectedCard.dataset.suiteId),
+            parseInt(selectedCard.dataset.cardNumber))) {
+            return;
+        }
+        gameState.placeCard(row, col,
             parseInt(selectedCard.dataset.suiteId),
             parseInt(selectedCard.dataset.cardNumber));
+        this.gameView.selectedCard = null;
     }
 }
 
@@ -414,10 +628,10 @@ class SettingsPage {
         const boardSliderConfig = { min: 5, max: 20, defaultValue: 10, label: 'board size', step: 1 };
         const boardSizeSlider = new ConfigSlider(boardSliderConfig);
         innerContainer.appendChild(boardSizeSlider.getElement());
-        const deckSliderConfig = { min: 1, max: suiteColors.length, defaultValue: 2, label: 'number of decks', step: 1 };
+        const deckSliderConfig = { min: 1, max: suiteColors.length, defaultValue: 4, label: 'number of decks', step: 1 };
         const deckSizeSlider = new ConfigSlider(deckSliderConfig);
         innerContainer.appendChild(deckSizeSlider.getElement());
-        const cardSliderConfig = { min: 5, max: 15, defaultValue: 8, label: 'number of cards', step: 1 };
+        const cardSliderConfig = { min: 5, max: 16, defaultValue: 12, label: 'number of cards', step: 1 };
         const cardSizeSlider = new ConfigSlider(cardSliderConfig);
         innerContainer.appendChild(cardSizeSlider.getElement());
         const player1Name = new TextBox({
@@ -432,9 +646,9 @@ class SettingsPage {
         innerContainer.appendChild(player2Name.getElement());
         container.querySelector('#start-game-button').addEventListener('click', () => {
             this.configuration.playMode = playMode.getValue();
-            this.configuration.boardSize = boardSizeSlider.getValue();
-            this.configuration.numCards = cardSizeSlider.getValue();
-            this.configuration.numDecks = deckSizeSlider.getValue();
+            this.configuration.boardSize = parseInt(boardSizeSlider.getValue());
+            this.configuration.numCards = parseInt(cardSizeSlider.getValue());
+            this.configuration.numDecks = parseInt(deckSizeSlider.getValue());
             this.configuration.player1Name = !player1Name.getValue()
                 ? player1Name.defaultText
                 : player1Name.getValue();
@@ -468,12 +682,14 @@ class GamePage {
     constructor(configuration, onNext) {
         this.onNext = onNext;
         this.configuration = configuration;
+        window.addEventListener("resize", () =>
+            adjustScalingFactor(this.configuration.boardSize, this.configuration.numDecks));
+        adjustScalingFactor(this.configuration.boardSize, this.configuration.numDecks);
         this.container = this.createView();
         this.gameView = new GameView(
             configuration.boardSize,
             configuration.numDecks,
-            configuration.numCards,
-            initialBoardConfig);
+            configuration.numCards);
         const gameHeader = document.getElementById('game-header');
         gameState.addNotifyCallback('game-header', _ => {
             const getPlayerName = p => p == 0
