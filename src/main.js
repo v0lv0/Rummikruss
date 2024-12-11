@@ -372,6 +372,7 @@ class GameState {
     }
 
     getScoreForTurn(row, col, suiteId, cardNumber) {
+        // Works only if the new cards is consistent with the board.
         const hArray = this.getHorizontalConnected(row, col, suiteId, cardNumber);
         const vArray = this.getVerticalConnected(row, col, suiteId, cardNumber);
         if (Math.min(hArray.length, vArray.length) == 1
