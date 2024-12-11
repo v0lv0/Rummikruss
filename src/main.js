@@ -15,14 +15,17 @@ const cardCellSizeDif = 2;
 let cardMargin = 10;
 const cardMarginScale = 8 / 40;
 
-function adjustScalingFactor(boardSize, numDecks) {
+function adjustScalingFactor(boardSize, numDecks, numCards) {
     const targetHeight = window.innerHeight
         - boardSize * (cellMargin + cardCellSizeDif);
+    const targetWidth = window.innerWidth;
+    const cellSizeH = Math.floor(targetWidth / (numCards + (numCards + 3) * cardMarginScale));
     cellSize = Math.floor(targetHeight / (boardSize * (1 + cardMarginScale) + numDecks));
+    cellSize = Math.min(cellSize, cellSizeH);
     cardSize = cellSize - cardCellSizeDif;
     borderRadius = Math.round(borderRadiusScale * cardSize);
     cardMargin = Math.floor(cardSize * cardMarginScale);
-    console.log(borderRadiusScale);
+    console.log(cardMargin);
     console.log(borderRadius);
 }
 
@@ -258,8 +261,6 @@ class GameState {
             left.push(this.board[row][j]);
             j--;
         }
-        console.log("horz");
-        console.log(left);
         left.reverse();
         return left.concat(right);
     }
@@ -356,7 +357,6 @@ class GameState {
     }
 
     placeCard(row, col, suiteId, cardNumber) {
-        // TODO
         if (!this.canPlaceCard(row, col, suiteId, cardNumber))
             throw new Error("Invalid call, need to check before calling this");
         this.board[row][col] = [suiteId, cardNumber];
@@ -364,18 +364,34 @@ class GameState {
         if (this.cards.every(cards => cards.every(c => !c))) {
             this.gameOver_ = true;
         }
-        let vis = Array.from({ length: this.boardSize }, _ =>
-            Array.from({ length: this.boardSize }, _ => false)
-        );
-        vis[row][col] = true;
-        this.scores[this.currentPlayer] +=
-            this.getNumConnected(row, col, vis);
-        console.log(vis);
-        console.log(this.scores);
+        this.scores[this.currentPlayer] += this.getScoreForTurn(row, col, suiteId, cardNumber);
         this.currentPlayer = (this.currentPlayer + 1) % numPlayers;
         this.lastPlayedCard.suiteId = suiteId;
         this.lastPlayedCard.cardNumber = cardNumber;
         this.notify();
+    }
+
+    getScoreForTurn(row, col, suiteId, cardNumber) {
+        const hArray = this.getHorizontalConnected(row, col, suiteId, cardNumber);
+        const vArray = this.getVerticalConnected(row, col, suiteId, cardNumber);
+        if (Math.min(hArray.length, vArray.length) == 1
+            && ((hArray[0][0] == suiteId && hArray[0][1] == cardNumber)
+                || (hArray[hArray.length - 1][0] == suiteId
+                    && hArray[hArray.length - 1][1] == cardNumber)
+                || (vArray[0][0] == suiteId && vArray[0][1] == cardNumber)
+                || (vArray[vArray.length - 1][0] == suiteId
+                    && vArray[vArray.length - 1][1] == cardNumber))) {
+            // Does not connect two disjoint arrays
+            return Math.max(hArray.length, vArray.length);
+        }
+        let vis = Array.from({ length: this.boardSize }, _ =>
+            Array.from({ length: this.boardSize }, _ => false)
+        );
+        vis[row][col] = true;
+        const score = this.getNumConnected(row, col, vis);
+        console.log(vis);
+        console.log(this.scores);
+        return score;
     }
 
     isCardInDeck(suiteId, cardNumber) {
@@ -441,7 +457,7 @@ class DeckView {
         deck.innerHTML = '';
         deck.classList.add('card-deck');
         // deck.style.gap = `${cardMargin}px`;
-        deck.style.gap = `10px`;
+        deck.style.gap = `${cardMargin}px`;
         deck.style.margin = `${cardMargin}px`;
         this.cardViews = []
         for (let i = 0; i < this.numCards; i++) {
@@ -682,9 +698,15 @@ class GamePage {
     constructor(configuration, onNext) {
         this.onNext = onNext;
         this.configuration = configuration;
-        window.addEventListener("resize", () =>
-            adjustScalingFactor(this.configuration.boardSize, this.configuration.numDecks));
-        adjustScalingFactor(this.configuration.boardSize, this.configuration.numDecks);
+        window.addEventListener("resize", () => {
+            adjustScalingFactor(this.configuration.boardSize,
+                this.configuration.numDecks,
+                this.configuration.numCards);
+            gameState.notify();
+        });
+        adjustScalingFactor(this.configuration.boardSize,
+            this.configuration.numDecks,
+            this.configuration.numCards);
         this.container = this.createView();
         this.gameView = new GameView(
             configuration.boardSize,
