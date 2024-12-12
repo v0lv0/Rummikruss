@@ -714,3 +714,18 @@ button#restart-button:active {
 .score-view-player {
     font-weight: bold;
 }
+
+.cell.highlight {
+    background-color: rgba(255, 215, 0, 0.7); /* Semi-transparent gold */
+    border: 2px solid #FFD700; /* Bright gold border */
+    animation: highlight-fade 0.5s ease-in-out infinite alternate; /* Fading animation */
+}
+
+@keyframes highlight-fade {
+    from {
+        opacity: 1;
+    }
+    to {
+        opacity: 0.5;
+    }
+}

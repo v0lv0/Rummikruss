@@ -14,8 +14,7 @@ Rummikruss is a strategic board game where players strategically place cards fro
 ### Basic Placement Rules
 1. Players alternate turns placing cards on empty board cells
 2. Card placement must create a valid set:
-   - Ascending sequence (e.g., 1-2-3... with the same color)
-   - Descending sequence (e.g., 3-2-1... with the same color)
+   - Ascending or descending sequence (e.g. with the same color)
    - Repeated number in different colors
 
 3. Placement Restrictions:

@@ -373,33 +373,85 @@ class GameState {
         this.notify();
     }
 
-    getScoreForTurn(row, col, suiteId, cardNumber) {
-        // Works only if the new cards is consistent with the board.
-        const hArray = this.getHorizontalConnected(row, col, suiteId, cardNumber);
-        const vArray = this.getVerticalConnected(row, col, suiteId, cardNumber);
-        if (Math.min(hArray.length, vArray.length) == 1
-            && ((hArray[0][0] == suiteId && hArray[0][1] == cardNumber)
-                || (hArray[hArray.length - 1][0] == suiteId
-                    && hArray[hArray.length - 1][1] == cardNumber)
-                || (vArray[0][0] == suiteId && vArray[0][1] == cardNumber)
-                || (vArray[vArray.length - 1][0] == suiteId
-                    && vArray[vArray.length - 1][1] == cardNumber))) {
-            // Does not connect two disjoint arrays
-            return Math.max(hArray.length, vArray.length);
-        }
-        let vis = Array.from({ length: this.boardSize }, _ =>
-            Array.from({ length: this.boardSize }, _ => false)
-        );
-        vis[row][col] = true;
-        const score = this.getNumConnected(row, col, vis);
-        console.log(vis);
-        console.log(this.scores);
-        return score;
-    }
+    // getScoreForTurn(row, col, suiteId, cardNumber) {
+    //     // Works only if the new cards is consistent with the board.
+    //     const hArray = this.getHorizontalConnected(row, col, suiteId, cardNumber);
+    //     const vArray = this.getVerticalConnected(row, col, suiteId, cardNumber);
+    //     if (Math.min(hArray.length, vArray.length) == 1
+    //         && ((hArray[0][0] == suiteId && hArray[0][1] == cardNumber)
+    //             || (hArray[hArray.length - 1][0] == suiteId
+    //                 && hArray[hArray.length - 1][1] == cardNumber)
+    //             || (vArray[0][0] == suiteId && vArray[0][1] == cardNumber)
+    //             || (vArray[vArray.length - 1][0] == suiteId
+    //                 && vArray[vArray.length - 1][1] == cardNumber))) {
+    //         // Does not connect two disjoint arrays
+    //         return Math.max(hArray.length, vArray.length);
+    //     }
+    //     let vis = Array.from({ length: this.boardSize }, _ =>
+    //         Array.from({ length: this.boardSize }, _ => false)
+    //     );
+    //     vis[row][col] = true;
+    //     const score = this.getNumConnected(row, col, vis);
+    //     console.log(vis);
+    //     console.log(this.scores);
+    //     return score;
+    // }
 
+    // getScoreForTurn(row, col, suiteId, cardNumber) {
+    //     // Helper function to explore valid connections recursively
+    //     const exploreValidConnections = (r, c, prevSuiteId, prevCardNumber, visited) => {
+    //         if (r < 0 || r >= this.boardSize || c < 0 || c >= this.boardSize) return 0;
+    //         if (visited[r][c]) return 0; // Skip already visited cells in this traversal
+    //         if (!this.cellHasCard(r, c)) return 0; // Skip empty cells
+    
+    //         const [currentSuiteId, currentCardNumber] = this.board[r][c];
+    
+    //         // Check if the connection is valid
+    //         const isValidConnection =
+    //             (currentCardNumber % this.uniqueCards === prevCardNumber % this.uniqueCards &&
+    //                 currentSuiteId !== prevSuiteId) || // Same number, different color
+    //             (currentSuiteId === prevSuiteId &&
+    //                 Math.abs(currentCardNumber % this.uniqueCards - prevCardNumber % this.uniqueCards) === 1); // Same color, consecutive numbers
+    
+    //         if (!isValidConnection) return 0; // Stop if not a valid connection
+    
+    //         visited[r][c] = true; // Mark this cell as visited for this traversal
+    //         let count = 1; // Count this card
+    
+    //         // Explore all 4 directions
+    //         count += exploreValidConnections(r + 1, c, currentSuiteId, currentCardNumber, visited);
+    //         count += exploreValidConnections(r - 1, c, currentSuiteId, currentCardNumber, visited);
+    //         count += exploreValidConnections(r, c + 1, currentSuiteId, currentCardNumber, visited);
+    //         count += exploreValidConnections(r, c - 1, currentSuiteId, currentCardNumber, visited);
+    
+    //         return count;
+    //     };
+    
+    //     // Start exploring from the current card
+    //     let score = 0;
+    
+    //     // Explore in all four directions with independent visited arrays
+    //     for (const [dr, dc] of [
+    //         [1, 0], [-1, 0], [0, 1], [0, -1]
+    //     ]) {
+    //         let visited = Array.from({ length: this.boardSize }, _ =>
+    //             Array.from({ length: this.boardSize }, _ => false)
+    //         );
+    //         visited[row][col] = true; // Mark the starting card as visited
+    //         score += exploreValidConnections(row + dr, col + dc, suiteId, cardNumber, visited);
+    //     }
+    
+    //     // Add the base card count (itself)
+    //     score += 1;
+    
+    //     console.log("Score for turn:", score);
+    //     return score; // Return the total score including intersections
+    // }
+    
+    
     getScoreForTurn(row, col, suiteId, cardNumber) {
         // Helper function to explore valid connections recursively
-        const exploreValidConnections = (r, c, prevSuiteId, prevCardNumber, visited) => {
+        const exploreValidConnections = (r, c, prevSuiteId, prevCardNumber, visited, points) => {
             if (r < 0 || r >= this.boardSize || c < 0 || c >= this.boardSize) return 0;
             if (visited[r][c]) return 0; // Skip already visited cells in this traversal
             if (!this.cellHasCard(r, c)) return 0; // Skip empty cells
@@ -416,40 +468,43 @@ class GameState {
             if (!isValidConnection) return 0; // Stop if not a valid connection
     
             visited[r][c] = true; // Mark this cell as visited for this traversal
+            points.push([r, c]); // Add this cell to the points array
             let count = 1; // Count this card
     
             // Explore all 4 directions
-            count += exploreValidConnections(r + 1, c, currentSuiteId, currentCardNumber, visited);
-            count += exploreValidConnections(r - 1, c, currentSuiteId, currentCardNumber, visited);
-            count += exploreValidConnections(r, c + 1, currentSuiteId, currentCardNumber, visited);
-            count += exploreValidConnections(r, c - 1, currentSuiteId, currentCardNumber, visited);
+            count += exploreValidConnections(r + 1, c, currentSuiteId, currentCardNumber, visited, points);
+            count += exploreValidConnections(r - 1, c, currentSuiteId, currentCardNumber, visited, points);
+            count += exploreValidConnections(r, c + 1, currentSuiteId, currentCardNumber, visited, points);
+            count += exploreValidConnections(r, c - 1, currentSuiteId, currentCardNumber, visited, points);
     
             return count;
         };
     
         // Start exploring from the current card
         let score = 0;
+        let points = [[row, col]]; // Highlight the initial card
+        let visited = Array.from({ length: this.boardSize }, _ =>
+            Array.from({ length: this.boardSize }, _ => false)
+        );
+        visited[row][col] = true;
     
-        // Explore in all four directions with independent visited arrays
+        // Explore in all four directions
         for (const [dr, dc] of [
             [1, 0], [-1, 0], [0, 1], [0, -1]
         ]) {
-            let visited = Array.from({ length: this.boardSize }, _ =>
-                Array.from({ length: this.boardSize }, _ => false)
-            );
-            visited[row][col] = true; // Mark the starting card as visited
-            score += exploreValidConnections(row + dr, col + dc, suiteId, cardNumber, visited);
+            score += exploreValidConnections(row + dr, col + dc, suiteId, cardNumber, visited, points);
         }
     
-        // Add the base card count (itself)
+        // Add the base card to the score
         score += 1;
     
+        // Save the points contributing to the score for rendering
+        this.highlightedPoints = points;
+    
         console.log("Score for turn:", score);
-        return score; // Return the total score including intersections
+        return score; // Return the total score
     }
     
-    
-
     isCardInDeck(suiteId, cardNumber) {
         return this.cards[suiteId][cardNumber];
     }
@@ -606,6 +661,78 @@ class CellView {
     }
 }
 
+// class BoardView {
+//     constructor(parentView, boardSize) {
+//         this.gameView = parentView;
+//         this.boardSize = boardSize;
+//         this.cellViews = [];
+//         const board = document.getElementById('board');
+//         board.addEventListener('mouseover', e => {
+//             const target = e.target;
+//             if (target.getAttribute('id')?.includes('cell')
+//                 && target.childElementCount == 0) {
+//                 if (this.gameView.selectedCard
+//                     && gameState.canPlaceCard(parseInt(target.dataset.row),
+//                         parseInt(target.dataset.col),
+//                         parseInt(this.gameView.selectedCard.dataset.suiteId),
+//                         parseInt(this.gameView.selectedCard.dataset.cardNumber)))
+//                     target.classList.add('hover');
+//             }
+//         });
+//         board.addEventListener('mouseout', e => {
+//             const target = e.target;
+//             if (target.getAttribute('id').includes('cell'))
+//                 if (target.classList.contains('hover'))
+//                     target.classList.remove('hover');
+//         });
+//         board.addEventListener('click', e => this.onClick(e));
+//         this.boardDiv = board;
+//         this.render();
+//         gameState.addNotifyCallback('board', _ => { this.render(); });
+//     }
+
+//     render() {
+//         const board = this.boardDiv;
+//         board.innerHTML = "";
+//         board.style.gridTemplateColumns = `repeat(${this.boardSize}, ${cellSize}px)`;
+//         board.style.gridTemplateRows = `repeat(${this.boardSize}, ${cellSize}px)`;
+//         board.style.gap = `${cellMargin}px`
+//         addBoardPadding(board, 0, cellMargin);
+//         const boardState = gameState.getBoardState();
+//         for (let i = 0; i < this.boardSize; i++) {
+//             for (let j = 0; j < this.boardSize; j++) {
+//                 const cellView = new CellView(this, i, j);
+//                 if (boardState[i][j][0] != -1 && boardState[i][j][1] != -1) {
+//                     const cardView = new CardView(null, boardState[i][j][0], boardState[i][j][1]);
+//                     cellView.cellDiv.appendChild(cardView.cardDiv);
+//                 }
+//                 board.appendChild(cellView.cellDiv);
+//                 this.cellViews.push(cellView);
+//             }
+//         }
+//     }
+
+//     onClick(e) {
+//         if (!e.target.getAttribute('id').includes('cell')
+//             || e.target.childElementCount != 0)
+//             return;
+//         if (!this.gameView.selectedCard) return
+//         const selectedCard = this.gameView.selectedCard;
+//         const cell = e.target;
+//         const row = parseInt(cell.dataset.row);
+//         const col = parseInt(cell.dataset.col);
+//         if (!gameState.canPlaceCard(row, col,
+//             parseInt(selectedCard.dataset.suiteId),
+//             parseInt(selectedCard.dataset.cardNumber))) {
+//             return;
+//         }
+//         gameState.placeCard(row, col,
+//             parseInt(selectedCard.dataset.suiteId),
+//             parseInt(selectedCard.dataset.cardNumber));
+//         this.gameView.selectedCard = null;
+//     }
+// }
+
 class BoardView {
     constructor(parentView, boardSize) {
         this.gameView = parentView;
@@ -644,6 +771,10 @@ class BoardView {
         board.style.gap = `${cellMargin}px`
         addBoardPadding(board, 0, cellMargin);
         const boardState = gameState.getBoardState();
+
+        // Retrieve highlighted points for scoring
+        const highlightedPoints = gameState.highlightedPoints || [];
+
         for (let i = 0; i < this.boardSize; i++) {
             for (let j = 0; j < this.boardSize; j++) {
                 const cellView = new CellView(this, i, j);
@@ -651,6 +782,13 @@ class BoardView {
                     const cardView = new CardView(null, boardState[i][j][0], boardState[i][j][1]);
                     cellView.cellDiv.appendChild(cardView.cardDiv);
                 }
+
+                // Highlight the cell if it contributed to the score
+                if (highlightedPoints.some(([r, c]) => r === i && c === j)) {
+                    cellView.cellDiv.classList.add('highlight');
+                    setTimeout(() => cellView.cellDiv.classList.remove('highlight'), 2000);
+                }
+
                 board.appendChild(cellView.cellDiv);
                 this.cellViews.push(cellView);
             }
@@ -677,6 +815,8 @@ class BoardView {
         this.gameView.selectedCard = null;
     }
 }
+
+
 
 class ScoreView {
     constructor(playerId, playerName) {
