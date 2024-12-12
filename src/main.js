@@ -173,10 +173,11 @@ function randInt(a, b) {
 const initialBoardConfig = [[2, 2, 0, 2], [4, 4, 0, 3]];
 // TODO: Replace this with actual game logic
 class GameState {
-    constructor(boardSize, numDecks, numCards) {
+    constructor(boardSize, numDecks, numCards, numReps) {
         this.boardSize = boardSize;
         this.numDecks = numDecks;
         this.numCards = numCards;
+        this.uniqueCards = Math.floor(this.numCards / numReps);
         this.callbacks = {};
         this.currentPlayer = 0;
         this.cards = Array.from(
@@ -293,7 +294,7 @@ class GameState {
     isArrayAsc(arr) {
         console.log(arr);
         for (let i = 0; i < arr.length - 1; i++) {
-            if (arr[i + 1][1] - arr[i][1] != 1
+            if (arr[i + 1][1] % this.uniqueCards - arr[i][1] % this.uniqueCards != 1
                 || arr[i + 1][0] != arr[i][0])
                 return false;
         }
@@ -302,7 +303,7 @@ class GameState {
 
     isArrayDsc(arr) {
         for (let i = 0; i < arr.length - 1; i++) {
-            if (arr[i][1] - arr[i + 1][1] != 1
+            if (arr[i][1] % this.uniqueCards - arr[i + 1][1] % this.uniqueCards != 1
                 || arr[i + 1][0] != arr[i][0])
                 return false;
         }
@@ -310,10 +311,13 @@ class GameState {
     }
 
     isArrayRep(arr) {
+        let suitesUsed = Array.from({ length: this.numDecks }, _ => false);
+        suitesUsed[arr[0][0]] = true;
         for (let i = 0; i < arr.length - 1; i++) {
-            if (arr[i][1] != arr[i + 1][1]
-                || arr[i][0] == arr[i + 1][0])
+            if (arr[i][1] % this.uniqueCards != arr[i + 1][1] % this.uniqueCards
+                || suitesUsed[arr[i + 1][0]])
                 return false;
+            suitesUsed[arr[i + 1][0]] = true;
         }
         return true;
     }
@@ -361,9 +365,6 @@ class GameState {
             throw new Error("Invalid call, need to check before calling this");
         this.board[row][col] = [suiteId, cardNumber];
         this.cards[suiteId][cardNumber] = false;
-        if (this.cards.every(cards => cards.every(c => !c))) {
-            this.gameOver_ = true;
-        }
         this.scores[this.currentPlayer] += this.getScoreForTurn(row, col, suiteId, cardNumber);
         this.currentPlayer = (this.currentPlayer + 1) % numPlayers;
         this.lastPlayedCard.suiteId = suiteId;
@@ -402,7 +403,8 @@ class GameState {
     isCardBlocked(suiteId, cardNumber) {
         return this.isCardInDeck(suiteId, cardNumber)
             && (suiteId == this.lastPlayedCard.suiteId
-                || cardNumber == this.lastPlayedCard.cardNumber);
+                || cardNumber % this.uniqueCards
+                == this.lastPlayedCard.cardNumber % this.uniqueCards);
     }
 
     canSelectCard(suiteId, cardNumber) {
@@ -415,6 +417,23 @@ class GameState {
     getBoardState() { return this.board; }
     getDeckState() { return this.cards; }
 
+    canPlaceAny() {
+        for (let row = 0; row < this.boardSize; row++) {
+            for (let col = 0; col < this.boardSize; col++) {
+                for (let i = 0; i < this.numDecks; i++) {
+                    for (let j = 0; j < this.numCards; j++) {
+                        if (this.canPlaceCard(row, col, i, j)) return true;
+                    }
+                }
+            }
+        }
+        return false;
+    }
+
+    isGameOver() {
+        return !this.canPlaceAny();
+    }
+
     get gameOver() { return this.gameOver_; }
 
 }
@@ -422,10 +441,10 @@ let gameState = null;
 
 class GameView {
     constructor(boardSize, numDecks, numCards) {
-        gameState = new GameState(boardSize, numDecks, numCards);
         this.selectedCard = null;
         this.numDecks = numDecks;
         this.boardSize = boardSize;
+        this.deckViewsDiv = document.getElementById('card-block');
         const cardBlock = document.getElementById('card-block');
         this.deckViews = Array.from(
             { length: numDecks },
@@ -500,7 +519,7 @@ class CardView {
         card.style.width = `${cardSize}px`;
         card.style.borderRadius = `${borderRadius}px`;
         card.style.background = suiteColors[suiteId % suiteColors.length];
-        card.textContent = parseInt(cardNumber) + 1;
+        card.textContent = parseInt(cardNumber % gameState.uniqueCards) + 1;
         card.dataset.cardNumber = cardNumber;
         card.dataset.suiteId = suiteId;
 
@@ -636,21 +655,24 @@ class SettingsPage {
     createView() {
         const container = document.getElementById('settings-page');
         const innerContainer = container.querySelector('#settings-picker');
-        const playMode = new ConfigSelectionBox({
-            options: ["Human vs Human", "Me vs Computer", "Computer vs Me"],
-            defaultOption: -1,
-            labelText: "Play Mode"
-        });
-        innerContainer.appendChild(playMode.getElement());
-        const boardSliderConfig = { min: 5, max: 20, defaultValue: 10, label: 'board size', step: 1 };
+        // const playMode = new ConfigSelectionBox({
+        //     options: ["Human vs Human", "Me vs Computer", "Computer vs Me"],
+        //     defaultOption: -1,
+        //     labelText: "Play Mode"
+        // });
+        // innerContainer.appendChild(playMode.getElement());
+        const boardSliderConfig = { min: 5, max: 20, defaultValue: 10, labelText: 'board size', step: 1 };
         const boardSizeSlider = new ConfigSlider(boardSliderConfig);
         innerContainer.appendChild(boardSizeSlider.getElement());
-        const deckSliderConfig = { min: 1, max: suiteColors.length, defaultValue: 4, label: 'number of decks', step: 1 };
+        const deckSliderConfig = { min: 1, max: suiteColors.length, defaultValue: 4, labelText: 'number of colors', step: 1 };
         const deckSizeSlider = new ConfigSlider(deckSliderConfig);
         innerContainer.appendChild(deckSizeSlider.getElement());
-        const cardSliderConfig = { min: 5, max: 16, defaultValue: 12, label: 'number of cards', step: 1 };
+        const cardSliderConfig = { min: 4, max: 12, defaultValue: 6, labelText: 'number of unique tiles', step: 1 };
         const cardSizeSlider = new ConfigSlider(cardSliderConfig);
         innerContainer.appendChild(cardSizeSlider.getElement());
+        const repSliderConfig = { min: 1, max: 6, defaultValue: 2, labelText: 'number of tile repetitions', step: 1 };
+        const repSizeSlider = new ConfigSlider(repSliderConfig);
+        innerContainer.appendChild(repSizeSlider.getElement());
         const player1Name = new TextBox({
             defaultText: "Alice",
             labelText: "Player 1 Name"
@@ -662,9 +684,10 @@ class SettingsPage {
         });
         innerContainer.appendChild(player2Name.getElement());
         container.querySelector('#start-game-button').addEventListener('click', () => {
-            this.configuration.playMode = playMode.getValue();
+            // this.configuration.playMode = playMode.getValue();
             this.configuration.boardSize = parseInt(boardSizeSlider.getValue());
-            this.configuration.numCards = parseInt(cardSizeSlider.getValue());
+            this.configuration.numCards = parseInt(cardSizeSlider.getValue()) * parseInt(repSizeSlider.getValue());
+            this.configuration.numReps = parseInt(repSizeSlider.getValue());
             this.configuration.numDecks = parseInt(deckSizeSlider.getValue());
             this.configuration.player1Name = !player1Name.getValue()
                 ? player1Name.defaultText
@@ -699,6 +722,11 @@ class GamePage {
     constructor(configuration, onNext) {
         this.onNext = onNext;
         this.configuration = configuration;
+        gameState = new GameState(
+            this.configuration.boardSize,
+            this.configuration.numDecks,
+            this.configuration.numCards,
+            this.configuration.numReps);
         window.addEventListener("resize", () => {
             adjustScalingFactor(this.configuration.boardSize,
                 this.configuration.numDecks,
@@ -718,9 +746,16 @@ class GamePage {
             const getPlayerName = p => p == 0
                 ? this.configuration.player1Name
                 : this.configuration.player2Name;
-            if (gameState.gameOver) {
-                const winner = argMax(gameState.getScores());
-                gameHeader.textContent = `${getPlayerName(winner)} Wins!`;
+            if (gameState.isGameOver()) {
+                console.log("Game over");
+                const scores = gameState.getScores();
+                if (scores[0] == scores[1]) {
+                    gameHeader.textContent = `${getPlayerName(0)} and ${getPlayerName(1)} Draw!`;
+                } else {
+                    const winner = argMax(gameState.getScores());
+                    gameHeader.textContent = `${getPlayerName(winner)} Wins!`;
+                }
+                this.gameView.deckViewsDiv.style.display = 'none';
             } else {
                 gameHeader.textContent = `Turn: ${getPlayerName(gameState.currentPlayer)}`;
             }
