@@ -7,7 +7,7 @@ Rummikruss is a strategic board game where players strategically place cards fro
    + n := number of colors (1-8)
    + c := largest number in the deck (5-16)
    + r := number of repetitions of cards with the same color.
-- A deck with 2(n\*c\*r) will be created (2 of every number suit match)
+- A deck with 2(n\*c\*r) will be created.
 - Few randomly selected card will randomly placed on the board
 ## Game Rules
 
