@@ -4,28 +4,28 @@ Rummikruss is a strategic board game where players strategically place cards fro
 ## Setup
 - Decide hyper-parameter
    + b := board size (5-20 squares)
-   + n := number of suits (1-8)
-   + c := largest number in the deck(5-16)
-- A deck with 2(n*c) will be created (2 of every number suit match)
+   + n := number of colors (1-8)
+   + c := largest number in the deck (5-16)
+   + r := number of repetitions of cards with the same color.
+- A deck with 2(n\*c\*r) will be created (2 of every number suit match)
 - Few randomly selected card will randomly placed on the board
 ## Game Rules
 
 ### Basic Placement Rules
 1. Players alternate turns placing cards on empty board cells
 2. Card placement must create a valid set:
-   - Ascending sequence (e.g., 1-2-3 in same suite)
-   - Descending sequence (e.g., 3-2-1 in same suite)
-   - Repeated number in different suites
+   - Ascending sequence (e.g., 1-2-3... with the same color)
+   - Descending sequence (e.g., 3-2-1... with the same color)
+   - Repeated number in different colors
 
 3. Placement Restrictions:
    - Cards can only be placed in empty cells
    - Must connect to form a valid set
-   - Recent card placements temporarily block similar cards
+   - Last played blocks the cards with the same color and number for the next player.
 
 ### Scoring Mechanics
-- Points earned based on card connections
-- Connecting multiple sets multiplies scoring potential
-- Bonus points for bridging different sets
+- The score is updated as the length of the largest sequence made by the newly added card (refer example 1 below).
+- Bonus: if the placed card connects two disconnected blocks the new score would be the total number of connected cards containing the placed card (refer example 2 below). 
 
 ### Scoring Examples
 | Scenario | Placement | Points Earned |
