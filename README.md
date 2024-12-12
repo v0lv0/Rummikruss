@@ -1,82 +1,45 @@
-# Rummykruss Rule Book
-
 ## Overview
+Rummikruss is a strategic board game where players strategically place cards from different suites to create connected patterns. The goal is to maximize your score by forming sets while strategically blocking your opponent's moves.
 
-Rummykruss is a Rummikub-inspired game played on a crossword-style 2D grid. Players create valid sets and runs, scoring points for intersections. The game has two phases: a **Setup Phase** for drafting tiles and a **Gameplay Phase** for placing them.
+## Setup
+- Decide hyper-parameter
+   + b := board size (5-20 squares)
+   + n := number of suits (1-8)
+   + c := largest number in the deck(5-16)
+- A deck with 2(n*c) will be created (2 of every number suit match)
+- Few randomly selected card will randomly placed on the board
+## Game Rules
 
-## Components
+### Basic Placement Rules
+1. Players alternate turns placing cards on empty board cells
+2. Card placement must create a valid set:
+   - Ascending sequence (e.g., 1-2-3 in same suite)
+   - Descending sequence (e.g., 3-2-1 in same suite)
+   - Repeated number in different suites
 
-- **Tiles**: Numbered tiles (1-N) in multiple colors (1-C).
-- **Wildcards**: Default 2, can replace any tile.
-- **Game Grid**: Default size 15x15, includes **X random blocks** that cannot be placed on.
+3. Placement Restrictions:
+   - Cards can only be placed in empty cells
+   - Must connect to form a valid set
+   - Recent card placements temporarily block similar cards
 
-## Objective
+### Scoring Mechanics
+- Points earned based on card connections
+- Connecting multiple sets multiplies scoring potential
+- Bonus points for bridging different sets
 
-Score the most points by forming valid sets and runs while maximizing intersections. Use block-locking strategically to limit your opponent's options.
+### Scoring Examples
+| Scenario | Placement | Points Earned |
+|----------|-----------|---------------|
+| ![alt text](image.png) | Yellow 2 | 3 points (3 connected '2's) |
+| ![alt text](image-1.png) | Blue 6 | 6 points (connecting blue, red, yellow cards) |
 
-## Key Terms
+### Winning the Game
+- Game ends when:
+  - All cards are played
+  - No valid moves remain
+- Highest total score wins
 
-- **Set**:
-  - 3+ consecutive numbers, same color.
-  - 3+ tiles of the same number, different colors.
-- **Intersections**: A tile contributes to multiple sets
-<!-- 
-## Hyperparameters
-- **Number Range**:   Default 1–13.
-- **Colors**:         Default 4.
-- **Grid Size**:      Default 15x15.
-- **Blocked Tiles**:  Default 10
-- **Rack Capacity**:  Default 14 tiles.
-- **Wildcard Count**: Default 2.
-- **Moves Per Turn**: Default inf -->
-
-## Game Phases
-
-### 1. Setup Phase
-
-- $s$ blocks will be randomly placed onto the map as a part of the map. They can not be moved
-- Players alternate drafting tiles from a shuffled pool until racks are full (default: 14 tiles).
-- Wildcards are included in the draft.
-
-### 2. Gameplay Phase
-
-Players place tiles on the grid to score points.
-
-#### Turn option
-
-1. **Draw**: draw 1 tile and loose 1 pt
-2. **Place\Move**:
-   - Move and Place 1 or more tiles, as long as the end result contains only valid set
-   - tile placed may not be in multiple sets with the exception for intersections.
-   - The number used by the opponent last turn may not be used
-   - If the number of intersection increased, gain 2 pts, else 1
-
-## Endgame
-
-- Game ends when no moves remain and the tile pool is empty (or after a fixed number of turns).
-- **Winner**: Player with the highest score. Ties resolved by most intersections.
-
-<!-- ---------------------------------------------------------- -->
-## Testing rules
-
-- Any set of blocks that connect in the board must obey the patterns [asc, dsc, rep, alone] of size at least 3
-
-- Can't place the same number as the opponent in the previous turn.
-
-- Can't place block connecting to the same blocks as the previous turn.
-
-- [Opt] Can't place block connecting to the same block placed by the opponent in the last turn.
-
-- Score:  +1 if not connected, +2 if block connects
-
-## Game engine define
-
-Get_Game_state() ->
-   Board state(mxm array with numbers)
-   card state: k x [1,...,n]
-
-User_input(row:int, col:int, suiteid:int, num:int) ->
-   void
-
-Score(): ->
-   (int,int)
+## Strategic Tips
+- Look for multi-directional connections
+- Create opportunities for large set formations
+- Block opponent's potential high-scoring moves
