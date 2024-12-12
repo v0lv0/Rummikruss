@@ -357,7 +357,8 @@ class GameState {
             || this.isCardBlocked(suiteId, cardNumber)) {
             return false;
         }
-        return this.isConsistent(row, col, suiteId, cardNumber);
+        // return this.isConsistent(row, col, suiteId, cardNumber);
+        return true;
     }
 
     placeCard(row, col, suiteId, cardNumber) {
@@ -395,6 +396,59 @@ class GameState {
         console.log(this.scores);
         return score;
     }
+
+    getScoreForTurn(row, col, suiteId, cardNumber) {
+        // Helper function to explore valid connections recursively
+        const exploreValidConnections = (r, c, prevSuiteId, prevCardNumber, visited) => {
+            if (r < 0 || r >= this.boardSize || c < 0 || c >= this.boardSize) return 0;
+            if (visited[r][c]) return 0; // Skip already visited cells in this traversal
+            if (!this.cellHasCard(r, c)) return 0; // Skip empty cells
+    
+            const [currentSuiteId, currentCardNumber] = this.board[r][c];
+    
+            // Check if the connection is valid
+            const isValidConnection =
+                (currentCardNumber % this.uniqueCards === prevCardNumber % this.uniqueCards &&
+                    currentSuiteId !== prevSuiteId) || // Same number, different color
+                (currentSuiteId === prevSuiteId &&
+                    Math.abs(currentCardNumber % this.uniqueCards - prevCardNumber % this.uniqueCards) === 1); // Same color, consecutive numbers
+    
+            if (!isValidConnection) return 0; // Stop if not a valid connection
+    
+            visited[r][c] = true; // Mark this cell as visited for this traversal
+            let count = 1; // Count this card
+    
+            // Explore all 4 directions
+            count += exploreValidConnections(r + 1, c, currentSuiteId, currentCardNumber, visited);
+            count += exploreValidConnections(r - 1, c, currentSuiteId, currentCardNumber, visited);
+            count += exploreValidConnections(r, c + 1, currentSuiteId, currentCardNumber, visited);
+            count += exploreValidConnections(r, c - 1, currentSuiteId, currentCardNumber, visited);
+    
+            return count;
+        };
+    
+        // Start exploring from the current card
+        let score = 0;
+    
+        // Explore in all four directions with independent visited arrays
+        for (const [dr, dc] of [
+            [1, 0], [-1, 0], [0, 1], [0, -1]
+        ]) {
+            let visited = Array.from({ length: this.boardSize }, _ =>
+                Array.from({ length: this.boardSize }, _ => false)
+            );
+            visited[row][col] = true; // Mark the starting card as visited
+            score += exploreValidConnections(row + dr, col + dc, suiteId, cardNumber, visited);
+        }
+    
+        // Add the base card count (itself)
+        score += 1;
+    
+        console.log("Score for turn:", score);
+        return score; // Return the total score including intersections
+    }
+    
+    
 
     isCardInDeck(suiteId, cardNumber) {
         return this.cards[suiteId][cardNumber];
@@ -655,12 +709,7 @@ class SettingsPage {
     createView() {
         const container = document.getElementById('settings-page');
         const innerContainer = container.querySelector('#settings-picker');
-        // const playMode = new ConfigSelectionBox({
-        //     options: ["Human vs Human", "Me vs Computer", "Computer vs Me"],
-        //     defaultOption: -1,
-        //     labelText: "Play Mode"
-        // });
-        // innerContainer.appendChild(playMode.getElement());
+        
         const boardSliderConfig = { min: 5, max: 20, defaultValue: 10, labelText: 'board size', step: 1 };
         const boardSizeSlider = new ConfigSlider(boardSliderConfig);
         innerContainer.appendChild(boardSizeSlider.getElement());
