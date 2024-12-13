@@ -1,5 +1,7 @@
 ## Overview
-Rummikruss is a strategic board game where players strategically place cards from different suites to create connected patterns. The goal is to maximize your score by forming sets while strategically blocking your opponent's moves.
+In Rummikruss,  players place cards  of different colors to create
+connected patterns. The goal is to maximize your score by forming sets
+while blocking your opponent's moves.
 
 ## Setup
 - Decide hyper-parameter
@@ -7,24 +9,24 @@ Rummikruss is a strategic board game where players strategically place cards fro
    + n := number of colors (1-8)
    + c := largest number in the deck (5-16)
    + r := number of repetitions of cards with the same color.
-- A deck with 2(n\*c\*r) will be created.
-- Few randomly selected card will randomly placed on the board
+A few randomly selected cards will be placed on the board.
+
 ## Game Rules
 
 ### Basic Placement Rules
-1. Players alternate turns placing cards on empty board cells
+1. Players alternate turns placing cards on empty board cells.
 2. Card placement must create a valid set:
-   - Ascending or descending sequence (e.g. with the same color)
-   - Repeated number in different colors
+   - Ascending or descending sequence (e.g. with the same color).
+   - Repeated number in different colors (e.g. blue 4, red 4, yellow 4).
 
 3. Placement Restrictions:
-   - Cards can only be placed in empty cells
-   - Must connect to form a valid set
-   - Last played blocks the cards with the same color and number for the next player.
+   - Cards can only be placed in empty cells.
+   - Must connect to form a valid set.
+   - Last played card blocks all cards of the same color and all cards of the same number for the next player.
 
 ### Scoring Mechanics
-- The score is updated as the length of the largest sequence made by the newly added card (refer example 1 below).
-- Bonus: if the placed card connects two disconnected blocks the new score would be the total number of connected cards containing the placed card (refer example 2 below). 
+- The score is updated as the length of the largest sequence made by the newly added card (see example 1 below).
+- If the placed card connects two disconnected blocks the new score is the total number of connected cards containing the placed card (see example 2 below).
 
 ### Scoring Examples
 | Scenario | Placement | Points Earned |
@@ -34,11 +36,6 @@ Rummikruss is a strategic board game where players strategically place cards fro
 
 ### Winning the Game
 - Game ends when:
-  - All cards are played
-  - No valid moves remain
-- Highest total score wins
-
-## Strategic Tips
-- Look for multi-directional connections
-- Create opportunities for large set formations
-- Block opponent's potential high-scoring moves
+   - All cards are played or,
+   - no valid moves remain.
+- Highest total score wins.
