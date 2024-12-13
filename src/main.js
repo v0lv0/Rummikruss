@@ -786,7 +786,12 @@ class BoardView {
                 // Highlight the cell if it contributed to the score
                 if (highlightedPoints.some(([r, c]) => r === i && c === j)) {
                     cellView.cellDiv.classList.add('highlight');
-                    setTimeout(() => cellView.cellDiv.classList.remove('highlight'), 2000);
+                    const overlayDiv = document.createElement('div');
+                    overlayDiv.classList.add('overlay-dot');
+                    cellView.cellDiv.appendChild(overlayDiv);
+                    setTimeout(() => {
+                        cellView.cellDiv.classList.remove('highlight');
+                    }, 2000);
                 }
 
                 board.appendChild(cellView.cellDiv);

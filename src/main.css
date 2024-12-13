@@ -729,3 +729,14 @@ button#restart-button:active {
         opacity: 0.5;
     }
 }
+
+.overlay-dot {
+    position: absolute;
+    top: 25%;
+    left: 75%;
+    width: 12%; /* Adjustable radius */
+    height: 12%; /* Adjustable radius */
+    background-color: black;
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
+}
